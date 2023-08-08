@@ -14,6 +14,7 @@ import Text.Blaze.Html.Renderer.Text (renderHtml)
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 import Web.Scotty
+import Database.SQLite.Simple
 
 shortener :: IO ()
 shortener = do
@@ -48,3 +49,20 @@ shortener = do
         Nothing ->
           raiseStatus status404 "not found"
 
+data UrlField = UrlField Int String deriving (Show)
+
+instance FromRow UrlField where
+  fromRow = UrlField <$> field <*> field
+
+saveToDB :: String -> IO ()
+saveToDB url = do
+  conn <- open "shortener.db"
+  execute conn "INSERT INTO urls (url) VALUES (?)" (Only url)
+  close conn
+
+getById :: String -> IO String
+getById urlId = do
+  conn <- open "shortener.db"
+  url <- query conn "SELECT t FROM urls WHERE id = ?" (Only urlId) :: IO [UrlField]
+  close conn
+  return url
